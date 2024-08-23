@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administração - MariteStores</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        header {
+            background-color: #5a2d82;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        .form-container {
+            margin-bottom: 30px;
+        }
+
+        .form-container input, .form-container textarea, .form-container select {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .form-container button {
+            background-color: #5a2d82;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .form-container button:hover {
+            background-color: #3a1d5a;
+            transform: translateY(-3px);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-container img {
+            max-height: 100px;
+            margin-right: 20px;
+        }
+
+        .product-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .product-item {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            flex: 1 1 calc(33.333% - 40px);
+        }
+
+        .product-item img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .product-item button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .product-item button:hover {
+            background-color: #c0392b;
+            transform: translateY(-3px);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Administração - MariteStores</h1>
+</header>
+
+<div class="container">
+
+    <!-- Formulário para editar informações da loja -->
+    <div class="form-container">
+        <h2>Editar Informações da Loja</h2>
+        <div class="logo-container">
+            <img id="logo-preview" src="" alt="Logo da Loja">
+            <input type="file" id="logo-file" accept="image/*">
+            <button id="update-logo">Atualizar Logo</button>
+        </div>
+        <input type="text" id="store-name" placeholder="Nome da Loja">
+        <button id="update-store-name">Atualizar Nome da Loja</button>
+        <input type="text" id="contact-info" placeholder="Contato">
+        <button id="update-contact">Atualizar Contato</button>
+    </div>
+
+    <!-- Formulário para adicionar produto -->
+    <div class="form-container">
+        <h2>Adicionar Novo Produto</h2>
+        <input type="text" id="product-name" placeholder="Nome do Produto">
+        <input type="number" id="product-price" placeholder="Preço" step="0.01">
+        <input type="file" id="product-image" accept="image/*">
+        <button onclick="addProduct()">Adicionar Produto</button>
+    </div>
+
+    <!-- Formulário para editar produto -->
+    <div class="form-container">
+        <h2>Editar Produto</h2>
+        <input type="text" id="edit-product-id" placeholder="ID do Produto" readonly>
+        <input type="text" id="edit-product-name" placeholder="Nome do Produto">
+        <input type="number" id="edit-product-price" placeholder="Preço" step="0.01">
+        <input type="file" id="edit-product-image" accept="image/*">
+        <button onclick="updateProduct()">Atualizar Produto</button>
+    </div>
+
+    <!-- Lista de produtos -->
+    <div class="product-list" id="product-list">
+        <!-- Produtos serão listados aqui -->
+    </div>
+
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+    import { getDatabase, ref, set, update, remove, onValue } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-storage.js";
+
+    // Configuração do Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyBhNN1vh1G_BEwRe9r4A-4bEN9WbYA_Xy0",
+        authDomain: "maritestore-12ce5.firebaseapp.com",
+        projectId: "maritestore-12ce5",
+        storageBucket: "maritestore-12ce5.appspot.com",
+        messagingSenderId: "476047375711",
+        appId: "1:476047375711:web:4efd4a04ed752e31338aea",
+        measurementId: "G-0JZS99PC9M"
+    };
+
+    // Inicializar o Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const storage = getStorage(app);
+
+    // Função para adicionar produto
+    window.addProduct = async function() {
+        const name = document.getElementById('product-name').value;
+        const price = parseFloat(document.getElementById('product-price').value);
+        const imageFile = document.getElementById('product-image').files[0];
+
+        if (name && !isNaN(price) && imageFile) {
+            const imageRef = storageRef(storage, 'products/' + Date.now() + '-' + imageFile.name);
+            try {
+                await uploadBytes(imageRef, imageFile);
+                const imageUrl = await getDownloadURL(imageRef);
+
+                const productRef = ref(db, 'products/' + Date.now());
+                await set(productRef, {
+                    name: name,
+                    price: price,
+                    image: imageUrl
+                });
+
+                alert('Produto adicionado com sucesso!');
+                loadProducts();
+                clearForm();
+            } catch (error) {
+                alert('Erro ao adicionar produto: ' + error.message);
+            }
+        } else {
+            alert('Por favor, preencha todos os campos corretamente e selecione uma imagem.');
+        }
+    }
+
+    function clearForm() {
+        document.getElementById('product-name').value = '';
+        document.getElementById('product-price').value = '';
+        document.getElementById('product-image').value = '';
+    }
+
+    // Função para remover produto
+    window.removeProduct = function(id) {
+        const productRef = ref(db, 'products/' + id);
+        remove(productRef).then(() => {
+            alert('Produto removido com sucesso!');
+            loadProducts();
+        }).catch(error => {
+            alert('Erro ao remover produto: ' + error.message);
+        });
+    }
+
+    // Função para atualizar produto
+    window.updateProduct = async function() {
+        const id = document.getElementById('edit-product-id').value;
+        const name = document.getElementById('edit-product-name').value;
+        const price = parseFloat(document.getElementById('edit-product-price').value);
+        const imageFile = document.getElementById('edit-product-image').files[0];
+
+        if (id && name && !isNaN(price)) {
+            try {
+                if (imageFile) {
+                    const imageRef = storageRef(storage, 'products/' + Date.now() + '-' + imageFile.name);
+                    await uploadBytes(imageRef, imageFile);
+                    const imageUrl = await getDownloadURL(imageRef);
+
+                    await update(ref(db, 'products/' + id), { name: name, price: price, image: imageUrl });
+                } else {
+                    await update(ref(db, 'products/' + id), { name: name, price: price });
+                }
+
+                alert('Produto atualizado com sucesso!');
+                loadProducts();
+                clearEditForm();
+            } catch (error) {
+                alert('Erro ao atualizar produto: ' + error.message);
+            }
+        } else {
+            alert('Por favor, preencha todos os campos corretamente.');
+        }
+    }
+
+    function clearEditForm() {
+        document.getElementById('edit-product-id').value = '';
+        document.getElementById('edit-product-name').value = '';
+        document.getElementById('edit-product-price').value = '';
+        document.getElementById('edit-product-image').value = '';
+    }
+
+    // Função para carregar produtos
+    function loadProducts() {
+        const productList = document.getElementById('product-list');
+        productList.innerHTML = '';
+
+        const productsRef = ref(db, 'products');
+        onValue(productsRef, (snapshot) => {
+            const products = snapshot.val();
+            if (products) {
+                for (const id in products) {
+                    const product = products[id];
+                    const price = parseFloat(product.price); // Garantir que o preço seja um número
+                    productList.innerHTML += `
+                        <div class="product-item">
+                            <img src="${product.image}" alt="${product.name}">
+                            <h3>${product.name}</h3>
+                            <p>Preço: R$${isNaN(price) ? 'Indisponível' : price.toFixed(2)}</p>
+                            <button onclick="removeProduct('${id}')">Remover Produto</button>
+                            <button onclick="editProduct('${id}')">Editar Produto</button>
+                        </div>
+                    `;
+                }
+            } else {
+                productList.innerHTML = '<p>Nenhum produto disponível.</p>';
+            }
+        });
+    }
+
+    // Função para carregar informações da loja
+    function loadStoreInfo() {
+        const storeRef = ref(db, 'storeInfo');
+        onValue(storeRef, (snapshot) => {
+            const storeInfo = snapshot.val();
+            if (storeInfo) {
+                document.getElementById('logo-preview').src = storeInfo.logo || 'default-logo.png';
+                document.getElementById('store-name').value = storeInfo.name || '';
+                document.getElementById('contact-info').value = storeInfo.contact || '';
+            } else {
+                console.log('Informações da loja não encontradas.');
+            }
+        });
+    }
+
+    // Função para atualizar a logo
+    function updateLogo() {
+        const logoFile = document.getElementById('logo-file').files[0];
+        if (logoFile) {
+            const logoRef = storageRef(storage, 'logo/' + Date.now() + '-' + logoFile.name);
+            uploadBytes(logoRef, logoFile).then(() => {
+                getDownloadURL(logoRef).then((logoUrl) => {
+                    const storeInfoRef = ref(db, 'storeInfo');
+                    update(storeInfoRef, { logo: logoUrl }).then(() => {
+                        alert('Logo atualizada com sucesso!');
+                        document.getElementById('logo-preview').src = logoUrl;
+                    }).catch(error => {
+                        alert('Erro ao atualizar logo: ' + error.message);
+                    });
+                });
+            }).catch(error => {
+                alert('Erro ao fazer upload da logo: ' + error.message);
+            });
+        }
+    }
+
+    document.getElementById('update-logo').addEventListener('click', updateLogo);
+
+    // Função para atualizar o nome da loja
+    function updateStoreName() {
+        const storeName = document.getElementById('store-name').value;
+        if (storeName) {
+            const storeInfoRef = ref(db, 'storeInfo');
+            update(storeInfoRef, { name: storeName }).then(() => {
+                alert('Nome da loja atualizado com sucesso!');
+            }).catch(error => {
+                alert('Erro ao atualizar nome da loja: ' + error.message);
+            });
+        }
+    }
+
+    document.getElementById('update-store-name').addEventListener('click', updateStoreName);
+
+    // Função para atualizar o contato
+    function updateContact() {
+        const contact = document.getElementById('contact-info').value;
+        if (contact) {
+            const storeInfoRef = ref(db, 'storeInfo');
+            update(storeInfoRef, { contact: contact }).then(() => {
+                alert('Contato atualizado com sucesso!');
+            }).catch(error => {
+                alert('Erro ao atualizar contato: ' + error.message);
+            });
+        }
+    }
+
+    document.getElementById('update-contact').addEventListener('click', updateContact);
+
+    // Função para preencher o formulário de edição
+    window.editProduct = function(id) {
+        const productRef = ref(db, 'products/' + id);
+        onValue(productRef, (snapshot) => {
+            const product = snapshot.val();
+            if (product) {
+                document.getElementById('edit-product-id').value = id;
+                document.getElementById('edit-product-name').value = product.name;
+                document.getElementById('edit-product-price').value = product.price;
+                // A URL da imagem não é carregada no formulário, você deve fazer o upload da imagem novamente se necessário.
+            } else {
+                alert('Produto não encontrado.');
+            }
+        });
+    }
+
+    // Carregar produtos e informações da loja ao carregar a página
+    loadProducts();
+    loadStoreInfo();
+</script>
+
+</body>
+</html>
