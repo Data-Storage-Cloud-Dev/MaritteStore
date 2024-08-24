@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrinho - MariteStores</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        header {
+            background-color: #5a2d82;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        .cart-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .cart-item {
+            display: flex;
+            gap: 20px;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .cart-item img {
+            max-width: 150px;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        .cart-item-details {
+            flex-grow: 1;
+        }
+
+        .cart-item-details h3 {
+            margin: 0 0 10px;
+        }
+
+        .cart-item-details p {
+            margin: 5px 0;
+        }
+
+        .cart-item-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cart-item-actions input {
+            width: 50px;
+            text-align: center;
+        }
+
+        .cart-item-actions button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .cart-item-actions button:hover {
+            background-color: #c0392b;
+            transform: translateY(-3px);
+        }
+
+        .total {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .checkout-button {
+            margin-top: 20px;
+            background-color: #5a2d82;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            float: right;
+        }
+
+        .checkout-button:hover {
+            background-color: #3a1d5a;
+            transform: translateY(-3px);
+        }
+
+        .empty-cart {
+            text-align: center;
+            font-size: 18px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Seu Carrinho - MariteStores</h1>
+</header>
+
+<div class="container">
+    <div id="cart-list" class="cart-list">
+        <!-- Itens do carrinho serão listados aqui -->
+    </div>
+    <div id="total-price" class="total">Total: R$ 0,00</div>
+    <button id="checkout-button" class="checkout-button">Finalizar Compra</button>
+    <div id="empty-cart-message" class="empty-cart" style="display: none;">Seu carrinho está vazio.</div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+
+    // Configuração do Firebase
+    const firebaseConfig = {
+        apiKey: "API_KEY",
+        authDomain: "DOMAIN",
+        databaseURL: "DATABASE_URL",
+        projectId: "PROJECT_ID",
+        storageBucket: "STORAGE_BUCKET",
+        messagingSenderId: "SENDER_ID",
+        appId: "APP_ID",
+        measurementId: "MEASUREMENT_ID"
+    };
+
+    // Inicializar o Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    function loadCartItems() {
+        const cartRef = ref(db, 'cart');
+        onValue(cartRef, snapshot => {
+            const cartList = document.getElementById('cart-list');
+            const totalPriceElement = document.getElementById('total-price');
+            const emptyCartMessage = document.getElementById('empty-cart-message');
+            cartList.innerHTML = '';
+            let total = 0;
+
+            snapshot.forEach(childSnapshot => {
+                const item = childSnapshot.val();
+                const itemId = childSnapshot.key;
+
+                const cartItem = document.createElement('div');
+                cartItem.className = 'cart-item';
+
+                const itemImage = document.createElement('img');
+                itemImage.src = item.image;
+                cartItem.appendChild(itemImage);
+
+                const itemDetails = document.createElement('div');
+                itemDetails.className = 'cart-item-details';
+
+                const itemName = document.createElement('h3');
+                itemName.textContent = item.name;
+                itemDetails.appendChild(itemName);
+
+                const itemPrice = document.createElement('p');
+                itemPrice.textContent = 'Preço: R$ ' + item.price.toFixed(2);
+                itemDetails.appendChild(itemPrice);
+
+                const itemQuantity = document.createElement('p');
+                itemQuantity.textContent = 'Quantidade: ' + item.quantity;
+                itemDetails.appendChild(itemQuantity);
+
+                cartItem.appendChild(itemDetails);
+
+                const itemActions = document.createElement('div');
+                itemActions.className = 'cart-item-actions';
+
+                const removeButton = document.createElement('button');
+                removeButton.textContent = 'Remover';
+                removeButton.onclick = function() {
+                    removeCartItem(itemId);
+                };
+                itemActions.appendChild(removeButton);
+
+                cartItem.appendChild(itemActions);
+                cartList.appendChild(cartItem);
+
+                total += item.price * item.quantity;
+            });
+
+            totalPriceElement.textContent = 'Total: R$ ' + total.toFixed(2);
+
+            if (total === 0) {
+                emptyCartMessage.style.display = 'block';
+                totalPriceElement.style.display = 'none';
+            } else {
+                emptyCartMessage.style.display = 'none';
+                totalPriceElement.style.display = 'block';
+            }
+        });
+    }
+
+    function removeCartItem(itemId) {
+        const cartItemRef = ref(db, 'cart/' + itemId);
+        remove(cartItemRef)
+            .then(() => {
+                alert('Item removido com sucesso!');
+                loadCartItems();
+            })
+            .catch(error => {
+                alert('Erro ao remover item: ' + error.message);
+            });
+    }
+
+    loadCartItems();
+</script>
+
+</body>
+</html>
