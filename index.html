@@ -39,16 +39,18 @@
 
         .search-container {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             margin-bottom: 20px;
         }
 
         .search-container input, .search-container select {
-            padding: 10px;
-            font-size: 16px;
+            padding: 12px;
+            font-size: 18px;
             border: 1px solid #ddd;
             border-radius: 8px;
-            margin-right: 10px;
+            margin: 0 10px;
+            max-width: 400px;
+            width: 100%;
         }
 
         .container {
@@ -144,13 +146,14 @@
             justify-content: center;
             cursor: pointer;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
         }
 
         .cart-container {
             position: fixed;
             top: 20px;
             right: 20px;
-            width: 300px;
+            width: 320px;
             max-height: 500px;
             overflow-y: auto;
             background-color: #fff;
@@ -159,12 +162,31 @@
             display: none; /* Initially hidden */
             z-index: 1000;
             padding: 15px;
+            transition: opacity 0.3s ease;
         }
 
         .cart-container h2 {
             margin-top: 0;
             font-size: 26px;
             color: #6a1b9a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cart-container .close-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .cart-container .close-btn:hover {
+            background: #c0392b;
         }
 
         .cart-item {
@@ -199,6 +221,24 @@
 
         .cart-item button:hover {
             background-color: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .checkout-button {
+            background-color: #6a1b9a;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            font-size: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .checkout-button:hover {
+            background-color: #4a148c;
             transform: translateY(-2px);
         }
 
@@ -244,34 +284,37 @@
     <input type="text" id="search-input" placeholder="Pesquisar produtos...">
     <select id="filter-select">
         <option value="">Todas as Categorias</option>
-        <!-- As categorias serão carregadas aqui -->
+        <!-- As categorias serão carregadas aqui pelo Firebase -->
     </select>
 </div>
 
 <div class="container">
-    <div class="product-list" id="product-list">
-        <!-- Produtos serão listados aqui -->
+    <div id="product-list" class="product-list">
+        <!-- Produtos serão carregados aqui pelo Firebase -->
     </div>
 </div>
 
-<div class="cart-container" id="cart-container">
-    <h2>Carrinho de Compras</h2>
-    <div id="cart-items">
-        <!-- Itens do carrinho serão listados aqui -->
-    </div>
-    <button id="checkout-button">Finalizar Compra</button>
-</div>
-
-<div class="cart-icon" id="cart-icon">
+<div id="cart-icon" class="cart-icon">
     🛒
 </div>
 
-<div class="zoom-overlay" id="zoom-overlay">
-    <img id="zoom-image" src="" alt="Zoom">
+<div id="cart-container" class="cart-container">
+    <h2>
+        Carrinho
+        <button class="close-btn" onclick="document.getElementById('cart-container').style.display='none'">X</button>
+    </h2>
+    <div id="cart-items">
+        <!-- Itens do carrinho serão carregados aqui -->
+    </div>
+    <button id="checkout-button" class="checkout-button" disabled>Finalizar Compra</button>
 </div>
 
-<footer id="contact-info">
-    <!-- Contato será carregado aqui -->
+<div id="zoom-overlay" class="zoom-overlay">
+    <img id="zoom-image" src="" alt="Imagem do Produto">
+</div>
+
+<footer>
+    &copy; 2024 MariteStores. Todos os direitos reservados.
 </footer>
 
 <script type="module">
