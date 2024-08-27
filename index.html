@@ -147,6 +147,7 @@
             cursor: pointer;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             z-index: 1000;
+            font-size: 24px;
         }
 
         .cart-container {
@@ -159,7 +160,7 @@
             background-color: #fff;
             border-radius: 12px;
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-            display: none; /* Initially hidden */
+            display: none; /* Inicialmente oculto */
             z-index: 1000;
             padding: 15px;
             transition: opacity 0.3s ease;
@@ -271,199 +272,170 @@
             width: 100%;
             box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
         }
+
+        .cart-total {
+            font-size: 18px;
+            margin-top: 20px;
+            text-align: right;
+            color: #333;
+        }
+
+        .quantity-input {
+            width: 60px;
+            padding: 5px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
     </style>
 </head>
 <body>
 
 <header>
-    <img id="store-logo" src="default-logo.png" alt="Logo da Loja">
-    <h1 id="store-name">Visualizar Produtos - MariteStores</h1>
+    <img src="logo.png" alt="Logo MariteStores">
+    <h1>MariteStores</h1>
 </header>
 
 <div class="search-container">
-    <input type="text" id="search-input" placeholder="Pesquisar produtos...">
-    <select id="filter-select">
+    <input type="text" id="search-bar" placeholder="Pesquisar produtos...">
+    <select id="filter-category">
         <option value="">Todas as Categorias</option>
-        <!-- As categorias serão carregadas aqui pelo Firebase -->
+        <option value="eletronicos">Eletrônicos</option>
+        <option value="roupas">Roupas</option>
+        <option value="acessorios">Acessórios</option>
+        <!-- Adicione mais categorias conforme necessário -->
     </select>
 </div>
 
 <div class="container">
-    <div id="product-list" class="product-list">
-        <!-- Produtos serão carregados aqui pelo Firebase -->
+    <div class="product-list">
+        <!-- Exemplo de item de produto -->
+        <div class="product-item" data-id="1" data-category="eletronicos">
+            <img src="produto1.jpg" alt="Produto 1">
+            <h3>Produto 1</h3>
+            <p>R$ 99,90</p>
+            <p class="description">Descrição do Produto 1</p>
+            <button onclick="addToCart(1, 'Produto 1', 99.90)">Adicionar ao Carrinho</button>
+        </div>
+        <!-- Adicione mais produtos conforme necessário -->
     </div>
 </div>
 
-<div id="cart-icon" class="cart-icon">
-    🛒
+<div class="cart-icon" onclick="toggleCart()">🛒</div>
+
+<div class="cart-container" id="cart">
+    <h2>Meu Carrinho <button class="close-btn" onclick="toggleCart()">Fechar</button></h2>
+    <div id="cart-items"></div>
+    <div class="cart-total">Total: R$ <span id="cart-total">0.00</span></div>
+    <button class="checkout-button" onclick="checkout()">Finalizar Compra</button>
 </div>
 
-<div id="cart-container" class="cart-container">
-    <h2>
-        Carrinho
-        <button class="close-btn" onclick="document.getElementById('cart-container').style.display='none'">X</button>
-    </h2>
-    <div id="cart-items">
-        <!-- Itens do carrinho serão carregados aqui -->
-    </div>
-    <button id="checkout-button" class="checkout-button" disabled>Finalizar Compra</button>
-</div>
-
-<div id="zoom-overlay" class="zoom-overlay">
-    <img id="zoom-image" src="" alt="Imagem do Produto">
+<div class="zoom-overlay" id="zoom-overlay" onclick="closeZoom()">
+    <img id="zoom-img" src="" alt="Zoom">
 </div>
 
 <footer>
     &copy; 2024 MariteStores. Todos os direitos reservados.
 </footer>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
-
-    // Configuração do Firebase
-    const firebaseConfig = {
-        apiKey: "AIzaSyBhNN1vh1G_BEwRe9r4A-4bEN9WbYA_Xy0",
-        authDomain: "maritestore-12ce5.firebaseapp.com",
-        projectId: "maritestore-12ce5",
-        storageBucket: "maritestore-12ce5.appspot.com",
-        messagingSenderId: "476047375711",
-        appId: "1:476047375711:web:4efd4a04ed752e31338aea",
-        measurementId: "G-0JZS99PC9M",
-        databaseURL: "https://maritestore-12ce5-default-rtdb.firebaseio.com"  // URL do Firebase Realtime Database
-    };
-
-    // Inicializar o Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
+<script>
     let cart = [];
-    let products = [];
-    let categories = [];
+    let totalAmount = 0;
 
-    function loadProducts() {
-        const productList = document.getElementById('product-list');
-        const searchInput = document.getElementById('search-input').value.toLowerCase();
-        const filterSelect = document.getElementById('filter-select').value;
-
-        productList.innerHTML = '';
-
-        const productsRef = ref(db, 'products');
-        onValue(productsRef, (snapshot) => {
-            products = snapshot.val() || {};
-            if (products) {
-                productList.innerHTML = ''; // Limpar a lista antes de adicionar novos produtos
-                for (const id in products) {
-                    const product = products[id];
-                    if ((searchInput === '' || product.name.toLowerCase().includes(searchInput)) &&
-                        (filterSelect === '' || product.category === filterSelect)) {
-                        const price = parseFloat(product.price); // Garantir que o preço seja um número
-                        productList.innerHTML += `
-                            <div class="product-item">
-                                <img src="${product.image || 'default-product.png'}" alt="${product.name}" onclick="showZoomImage('${product.image || 'default-product.png'}')">
-                                <h3>${product.name}</h3>
-                                <p>Preço: R$${isNaN(price) ? 'Indisponível' : price.toFixed(2)}</p>
-                                <p class="description">${product.description || 'Descrição não disponível.'}</p>
-                                <button onclick="addToCart({ id: '${id}', name: '${product.name}', price: ${price}, image: '${product.image || 'default-product.png'}' })">Adicionar ao Carrinho</button>
-                            </div>
-                        `;
-                    }
-                }
-            } else {
-                productList.innerHTML = '<p>Nenhum produto disponível.</p>';
-            }
-        });
-    }
-
-    function loadCategories() {
-        const filterSelect = document.getElementById('filter-select');
-        const categoriesRef = ref(db, 'categories');
-        onValue(categoriesRef, (snapshot) => {
-            categories = snapshot.val() || [];
-            filterSelect.innerHTML = '<option value="">Todas as Categorias</option>';
-            categories.forEach(category => {
-                filterSelect.innerHTML += `<option value="${category}">${category}</option>`;
-            });
-        });
-    }
-
-    function loadStoreInfo() {
-        const storeRef = ref(db, 'storeInfo');
-        onValue(storeRef, (snapshot) => {
-            const storeInfo = snapshot.val();
-            if (storeInfo) {
-                document.getElementById('store-logo').src = storeInfo.logo || 'default-logo.png';
-                document.getElementById('store-name').textContent = storeInfo.name || 'Nome da Loja';
-                document.getElementById('contact-info').textContent = storeInfo.contact ? `Contato: ${storeInfo.contact}` : 'Contato não disponível';
-            } else {
-                console.log('Informações da loja não encontradas.');
-            }
-        });
-    }
-
-    function showZoomImage(src) {
-        const zoomOverlay = document.getElementById('zoom-overlay');
-        const zoomImage = document.getElementById('zoom-image');
-        zoomImage.src = src;
-        zoomOverlay.style.display = 'flex';
-    }
-
-    document.getElementById('zoom-overlay').addEventListener('click', () => {
-        document.getElementById('zoom-overlay').style.display = 'none';
-    });
-
-    document.getElementById('search-input').addEventListener('input', loadProducts);
-    document.getElementById('filter-select').addEventListener('change', loadProducts);
-    document.getElementById('cart-icon').addEventListener('click', () => {
-        const cartContainer = document.getElementById('cart-container');
-        cartContainer.style.display = cartContainer.style.display === 'block' ? 'none' : 'block';
-    });
-
-    window.addToCart = function(product) {
-        const index = cart.findIndex(item => item.id === product.id);
-        if (index === -1) {
-            cart.push({ ...product, quantity: 1 });
+    function addToCart(id, name, price) {
+        let item = cart.find(item => item.id === id);
+        if (item) {
+            item.quantity++;
         } else {
-            cart[index].quantity += 1;
+            cart.push({ id, name, price, quantity: 1 });
         }
-        updateCartUI();
-    };
+        updateCart();
+    }
 
-    window.removeFromCart = function(productId) {
-        cart = cart.filter(item => item.id !== productId);
-        updateCartUI();
-    };
-
-    function updateCartUI() {
-        const cartItems = document.getElementById('cart-items');
-        cartItems.innerHTML = '';
+    function updateCart() {
+        const cartItemsContainer = document.getElementById('cart-items');
+        const cartTotal = document.getElementById('cart-total');
+        cartItemsContainer.innerHTML = '';
+        totalAmount = 0;
 
         cart.forEach(item => {
-            cartItems.innerHTML += `
+            totalAmount += item.price * item.quantity;
+            cartItemsContainer.innerHTML += `
                 <div class="cart-item">
-                    <img src="${item.image}" alt="${item.name}">
+                    <img src="produto${item.id}.jpg" alt="${item.name}">
                     <div>
-                        <h3>${item.name}</h3>
-                        <p>Preço: R$${item.price.toFixed(2)}</p>
-                        <p>Quantidade: ${item.quantity}</p>
+                        <strong>${item.name}</strong><br>
+                        R$ ${item.price.toFixed(2)} x 
+                        <input type="number" class="quantity-input" value="${item.quantity}" min="1" onchange="updateQuantity(${item.id}, this.value)">
                     </div>
-                    <button onclick="removeFromCart('${item.id}')">Remover</button>
+                    <button onclick="removeFromCart(${item.id})">Remover</button>
                 </div>
             `;
         });
 
-        const checkoutButton = document.getElementById('checkout-button');
-        checkoutButton.disabled = cart.length === 0;
-        checkoutButton.onclick = () => {
-            const products = cart.map(item => `${item.name} (R$${item.price.toFixed(2)}) x ${item.quantity}`).join(', ');
-            const message = encodeURIComponent(`Olá! Gostaria de finalizar a compra dos seguintes produtos: ${products}.`);
-            window.open(`https://wa.me/5581993892484?text=${message}`, '_blank');
-        };
+        cartTotal.textContent = totalAmount.toFixed(2);
     }
 
-    loadCategories();
-    loadProducts();
-    loadStoreInfo();
+    function updateQuantity(id, quantity) {
+        let item = cart.find(item => item.id === id);
+        if (item) {
+            item.quantity = parseInt(quantity, 10);
+            updateCart();
+        }
+    }
+
+    function removeFromCart(id) {
+        cart = cart.filter(item => item.id !== id);
+        updateCart();
+    }
+
+    function toggleCart() {
+        const cartContainer = document.getElementById('cart');
+        cartContainer.style.display = cartContainer.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function checkout() {
+        let deliveryOption = prompt("Escolha a opção: 1 para Entrega, 2 para Retirada");
+        if (deliveryOption === '1') {
+            let address = prompt("Digite seu endereço de entrega:");
+            alert(`Compra finalizada! Endereço de entrega: ${address}\nTotal: R$ ${totalAmount.toFixed(2)}`);
+        } else if (deliveryOption === '2') {
+            alert(`Compra finalizada! Retire na loja.\nTotal: R$ ${totalAmount.toFixed(2)}`);
+        } else {
+            alert("Opção inválida. Finalização cancelada.");
+        }
+    }
+
+    function openZoom(src) {
+        const zoomOverlay = document.getElementById('zoom-overlay');
+        const zoomImg = document.getElementById('zoom-img');
+        zoomImg.src = src;
+        zoomOverlay.style.display = 'flex';
+    }
+
+    function closeZoom() {
+        document.getElementById('zoom-overlay').style.display = 'none';
+    }
+
+    document.querySelectorAll('.product-item img').forEach(img => {
+        img.addEventListener('click', () => openZoom(img.src));
+    });
+
+    document.getElementById('search-bar').addEventListener('input', filterProducts);
+    document.getElementById('filter-category').addEventListener('change', filterProducts);
+
+    function filterProducts() {
+        const searchQuery = document.getElementById('search-bar').value.toLowerCase();
+        const filterCategory = document.getElementById('filter-category').value;
+        document.querySelectorAll('.product-item').forEach(item => {
+            const name = item.querySelector('h3').textContent.toLowerCase();
+            const category = item.dataset.category || '';
+            if ((name.includes(searchQuery) || searchQuery === '') && (filterCategory === '' || filterCategory === category)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
 </script>
 
 </body>
