@@ -20,6 +20,7 @@
             display: flex;
             align-items: center;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
 
         header img {
@@ -36,6 +37,20 @@
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
         }
 
+        .search-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .search-container input, .search-container select {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-right: 10px;
+        }
+
         .container {
             max-width: 1200px;
             margin: 30px auto;
@@ -43,6 +58,7 @@
             background-color: #fff;
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
             border-radius: 12px;
+            position: relative;
         }
 
         .product-list {
@@ -91,6 +107,12 @@
             color: #666;
         }
 
+        .product-item .description {
+            font-size: 16px;
+            color: #888;
+            margin-top: 10px;
+        }
+
         .product-item button {
             background-color: #6a1b9a;
             color: white;
@@ -108,12 +130,35 @@
             transform: translateY(-2px);
         }
 
+        .cart-icon {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: #6a1b9a;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
         .cart-container {
-            margin-top: 30px;
-            padding: 20px;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            max-height: 500px;
+            overflow-y: auto;
             background-color: #fff;
             border-radius: 12px;
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            display: none; /* Initially hidden */
+            z-index: 1000;
+            padding: 15px;
         }
 
         .cart-container h2 {
@@ -195,22 +240,32 @@
     <h1 id="store-name">Visualizar Produtos - MariteStores</h1>
 </header>
 
+<div class="search-container">
+    <input type="text" id="search-input" placeholder="Pesquisar produtos...">
+    <select id="filter-select">
+        <option value="">Todas as Categorias</option>
+        <!-- As categorias serão carregadas aqui -->
+    </select>
+</div>
+
 <div class="container">
     <div class="product-list" id="product-list">
         <!-- Produtos serão listados aqui -->
     </div>
-
-    <!-- Carrinho de Compras -->
-    <div class="cart-container">
-        <h2>Carrinho de Compras</h2>
-        <div id="cart-items">
-            <!-- Itens do carrinho serão listados aqui -->
-        </div>
-        <button id="checkout-button">Finalizar Compra</button>
-    </div>
 </div>
 
-<!-- Zoom na Imagem -->
+<div class="cart-container" id="cart-container">
+    <h2>Carrinho de Compras</h2>
+    <div id="cart-items">
+        <!-- Itens do carrinho serão listados aqui -->
+    </div>
+    <button id="checkout-button">Finalizar Compra</button>
+</div>
+
+<div class="cart-icon" id="cart-icon">
+    🛒
+</div>
+
 <div class="zoom-overlay" id="zoom-overlay">
     <img id="zoom-image" src="" alt="Zoom">
 </div>
@@ -225,24 +280,102 @@
 
     // Configuração do Firebase
     const firebaseConfig = {
-    apiKey: "AIzaSyBhNN1vh1G_BEwRe9r4A-4bEN9WbYA_Xy0",
-    authDomain: "maritestore-12ce5.firebaseapp.com",
-    projectId: "maritestore-12ce5",
-    storageBucket: "maritestore-12ce5.appspot.com",
-    messagingSenderId: "476047375711",
-    appId: "1:476047375711:web:4efd4a04ed752e31338aea",
-    measurementId: "G-0JZS99PC9M",
-    databaseURL: "https://maritestore-12ce5-default-rtdb.firebaseio.com"  // URL do Firebase Realtime Database
-};
+        apiKey: "AIzaSyBhNN1vh1G_BEwRe9r4A-4bEN9WbYA_Xy0",
+        authDomain: "maritestore-12ce5.firebaseapp.com",
+        projectId: "maritestore-12ce5",
+        storageBucket: "maritestore-12ce5.appspot.com",
+        messagingSenderId: "476047375711",
+        appId: "1:476047375711:web:4efd4a04ed752e31338aea",
+        measurementId: "G-0JZS99PC9M",
+        databaseURL: "https://maritestore-12ce5-default-rtdb.firebaseio.com"  // URL do Firebase Realtime Database
+    };
 
     // Inicializar o Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Carrinho de Compras
     let cart = [];
+    let products = [];
+    let categories = [];
 
-    // Definindo funções no escopo global
+    function loadProducts() {
+        const productList = document.getElementById('product-list');
+        const searchInput = document.getElementById('search-input').value.toLowerCase();
+        const filterSelect = document.getElementById('filter-select').value;
+
+        productList.innerHTML = '';
+
+        const productsRef = ref(db, 'products');
+        onValue(productsRef, (snapshot) => {
+            products = snapshot.val() || {};
+            if (products) {
+                productList.innerHTML = ''; // Limpar a lista antes de adicionar novos produtos
+                for (const id in products) {
+                    const product = products[id];
+                    if ((searchInput === '' || product.name.toLowerCase().includes(searchInput)) &&
+                        (filterSelect === '' || product.category === filterSelect)) {
+                        const price = parseFloat(product.price); // Garantir que o preço seja um número
+                        productList.innerHTML += `
+                            <div class="product-item">
+                                <img src="${product.image || 'default-product.png'}" alt="${product.name}" onclick="showZoomImage('${product.image || 'default-product.png'}')">
+                                <h3>${product.name}</h3>
+                                <p>Preço: R$${isNaN(price) ? 'Indisponível' : price.toFixed(2)}</p>
+                                <p class="description">${product.description || 'Descrição não disponível.'}</p>
+                                <button onclick="addToCart({ id: '${id}', name: '${product.name}', price: ${price}, image: '${product.image || 'default-product.png'}' })">Adicionar ao Carrinho</button>
+                            </div>
+                        `;
+                    }
+                }
+            } else {
+                productList.innerHTML = '<p>Nenhum produto disponível.</p>';
+            }
+        });
+    }
+
+    function loadCategories() {
+        const filterSelect = document.getElementById('filter-select');
+        const categoriesRef = ref(db, 'categories');
+        onValue(categoriesRef, (snapshot) => {
+            categories = snapshot.val() || [];
+            filterSelect.innerHTML = '<option value="">Todas as Categorias</option>';
+            categories.forEach(category => {
+                filterSelect.innerHTML += `<option value="${category}">${category}</option>`;
+            });
+        });
+    }
+
+    function loadStoreInfo() {
+        const storeRef = ref(db, 'storeInfo');
+        onValue(storeRef, (snapshot) => {
+            const storeInfo = snapshot.val();
+            if (storeInfo) {
+                document.getElementById('store-logo').src = storeInfo.logo || 'default-logo.png';
+                document.getElementById('store-name').textContent = storeInfo.name || 'Nome da Loja';
+                document.getElementById('contact-info').textContent = storeInfo.contact ? `Contato: ${storeInfo.contact}` : 'Contato não disponível';
+            } else {
+                console.log('Informações da loja não encontradas.');
+            }
+        });
+    }
+
+    function showZoomImage(src) {
+        const zoomOverlay = document.getElementById('zoom-overlay');
+        const zoomImage = document.getElementById('zoom-image');
+        zoomImage.src = src;
+        zoomOverlay.style.display = 'flex';
+    }
+
+    document.getElementById('zoom-overlay').addEventListener('click', () => {
+        document.getElementById('zoom-overlay').style.display = 'none';
+    });
+
+    document.getElementById('search-input').addEventListener('input', loadProducts);
+    document.getElementById('filter-select').addEventListener('change', loadProducts);
+    document.getElementById('cart-icon').addEventListener('click', () => {
+        const cartContainer = document.getElementById('cart-container');
+        cartContainer.style.display = cartContainer.style.display === 'block' ? 'none' : 'block';
+    });
+
     window.addToCart = function(product) {
         const index = cart.findIndex(item => item.id === product.id);
         if (index === -1) {
@@ -279,64 +412,13 @@
         const checkoutButton = document.getElementById('checkout-button');
         checkoutButton.disabled = cart.length === 0;
         checkoutButton.onclick = () => {
-            const products = cart.map(item => `${item.name} (R$${item.price.toFixed(2)})`).join(', ');
+            const products = cart.map(item => `${item.name} (R$${item.price.toFixed(2)}) x ${item.quantity}`).join(', ');
             const message = encodeURIComponent(`Olá! Gostaria de finalizar a compra dos seguintes produtos: ${products}.`);
             window.open(`https://wa.me/5581993892484?text=${message}`, '_blank');
         };
     }
 
-    function loadProducts() {
-        const productList = document.getElementById('product-list');
-        productList.innerHTML = '';
-
-        const productsRef = ref(db, 'products');
-        onValue(productsRef, (snapshot) => {
-            const products = snapshot.val();
-            if (products) {
-                productList.innerHTML = ''; // Limpar a lista antes de adicionar novos produtos
-                for (const id in products) {
-                    const product = products[id];
-                    const price = parseFloat(product.price); // Garantir que o preço seja um número
-                    productList.innerHTML += `
-                        <div class="product-item">
-                            <img src="${product.image || 'default-product.png'}" alt="${product.name}" onclick="showZoomImage('${product.image || 'default-product.png'}')">
-                            <h3>${product.name}</h3>
-                            <p>Preço: R$${isNaN(price) ? 'Indisponível' : price.toFixed(2)}</p>
-                            <button onclick="addToCart({ id: '${id}', name: '${product.name}', price: ${price}, image: '${product.image || 'default-product.png'}' })">Adicionar ao Carrinho</button>
-                        </div>
-                    `;
-                }
-            } else {
-                productList.innerHTML = '<p>Nenhum produto disponível.</p>';
-            }
-        });
-    }
-
-    function loadStoreInfo() {
-        const storeRef = ref(db, 'storeInfo');
-        onValue(storeRef, (snapshot) => {
-            const storeInfo = snapshot.val();
-            if (storeInfo) {
-                document.getElementById('store-logo').src = storeInfo.logo || 'default-logo.png';
-                document.getElementById('store-name').textContent = storeInfo.name || 'Nome da Loja';
-                document.getElementById('contact-info').textContent = storeInfo.contact ? `Contato: ${storeInfo.contact}` : 'Contato não disponível';
-            } else {
-                console.log('Informações da loja não encontradas.');
-            }
-        });
-    }
-
-    function showZoomImage(src) {
-        const zoomOverlay = document.getElementById('zoom-overlay');
-        const zoomImage = document.getElementById('zoom-image');
-        zoomImage.src = src;
-        zoomOverlay.style.display = 'flex';
-    }
-
-    document.getElementById('zoom-overlay').addEventListener('click', () => {
-        document.getElementById('zoom-overlay').style.display = 'none';
-    });
-
+    loadCategories();
     loadProducts();
     loadStoreInfo();
 </script>
