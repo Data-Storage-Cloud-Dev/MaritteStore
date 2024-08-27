@@ -173,7 +173,7 @@
             background-color: #fff;
             border-radius: 12px;
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-            display: none; /* Inicialmente oculto */
+            display: none; /* Initially hidden */
             z-index: 1000;
             padding: 15px;
             transition: opacity 0.3s ease;
@@ -279,6 +279,7 @@
             border-radius: 8px;
             cursor: pointer;
             transition: background-color 0.3s ease, transform 0.3s ease;
+            margin-top: 20px;
             width: 100%;
         }
 
@@ -287,195 +288,218 @@
             transform: translateY(-2px);
         }
 
-        .message {
-            color: #e74c3c;
-            font-size: 18px;
+        .address-input {
+            display: none;
             margin-top: 10px;
+        }
+
+        .address-input input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .zoom-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .zoom-overlay img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
+
+        /* Media Queries */
+        @media (max-width: 768px) {
+            .product-item {
+                flex: 1 1 calc(50% - 60px);
+            }
+
+            .checkout-options button {
+                font-size: 16px;
+                padding: 8px 12px;
+            }
+
+            .checkout-button {
+                font-size: 18px;
+                padding: 12px 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .product-item {
+                flex: 1 1 100%;
+            }
+
+            .checkout-options button {
+                font-size: 14px;
+                padding: 6px 10px;
+            }
+
+            .checkout-button {
+                font-size: 16px;
+                padding: 10px 15px;
+            }
         }
     </style>
 </head>
 <body>
-    <header>
-        <img src="https://via.placeholder.com/60" alt="Logo da Loja">
-        <h1>MariteStores</h1>
-    </header>
 
-    <div class="search-container">
-        <input type="text" id="search-bar" placeholder="Pesquisar produtos...">
-        <select id="filter-category">
-            <option value="">Todas as Categorias</option>
-            <!-- Adicione opções de categoria aqui -->
-        </select>
+<header>
+    <img src="logo.png" alt="MariteStores Logo">
+    <h1>MariteStores</h1>
+    <div class="cart-icon" onclick="toggleCart()" data-count="0">
+        <img src="cart-icon.png" alt="Cart">
     </div>
+</header>
 
-    <div class="container">
-        <div class="product-list" id="product-list">
-            <!-- Os produtos serão injetados aqui pelo JavaScript -->
+<div class="search-container">
+    <input type="text" id="search" placeholder="Pesquisar produtos...">
+    <select id="filter">
+        <option value="">Todos</option>
+        <option value="category1">Categoria 1</option>
+        <option value="category2">Categoria 2</option>
+        <!-- Adicione mais opções de filtro aqui -->
+    </select>
+</div>
+
+<div class="container">
+    <div class="product-list">
+        <!-- Exemplo de item de produto -->
+        <div class="product-item">
+            <img src="product1.jpg" alt="Produto 1" onclick="zoomImage(this)">
+            <h3>Produto 1</h3>
+            <p>R$ 100,00</p>
+            <p class="description">Descrição do produto 1</p>
+            <button onclick="addToCart(this, 'Produto 1', 100.00, 'product1.jpg')">Adicionar ao Carrinho</button>
         </div>
+
+        <!-- Mais itens de produtos podem ser adicionados aqui -->
     </div>
+</div>
 
-    <div class="cart-icon" id="cart-icon" data-count="0">
-        🛒
+<!-- Carrinho -->
+<div class="cart-container">
+    <h2>Carrinho <button class="close-btn" onclick="toggleCart()">Fechar</button></h2>
+    <div class="cart-items">
+        <!-- Itens do carrinho serão adicionados aqui -->
     </div>
-
-    <div class="cart-container" id="cart-container">
-        <h2>
-            Carrinho de Compras
-            <button class="close-btn" id="close-cart">Fechar</button>
-        </h2>
-        <!-- Os itens do carrinho serão injetados aqui pelo JavaScript -->
-        <div class="checkout-options">
-            <button id="delivery-option">Entrega</button>
-            <button id="pickup-option">Retirada</button>
-        </div>
-        <button class="checkout-button" id="checkout-button">Finalizar Compra</button>
-        <div id="message" class="message"></div>
+    <div class="checkout-options">
+        <button onclick="chooseOption('retirar')">Retirar na Loja</button>
+        <button onclick="chooseOption('entregar')">Entregar</button>
     </div>
+    <div class="address-input">
+        <input type="text" id="address" placeholder="Digite seu endereço">
+    </div>
+    <button class="checkout-button" onclick="finalizePurchase()">Finalizar Compra</button>
+</div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-storage.js"></script>
-    <script>
-        // Configuração do Firebase
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
+<!-- Overlay para zoom de imagem -->
+<div class="zoom-overlay" onclick="closeZoom()">
+    <img src="" alt="Zoomed Image">
+</div>
 
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const storage = firebase.storage();
+<script>
+    let cart = [];
+    let cartCount = 0;
 
-        const productList = document.getElementById('product-list');
-        const cartIcon = document.getElementById('cart-icon');
-        const cartContainer = document.getElementById('cart-container');
-        const closeCartBtn = document.getElementById('close-cart');
-        const checkoutButton = document.getElementById('checkout-button');
-        const messageDiv = document.getElementById('message');
+    function toggleCart() {
+        const cartContainer = document.querySelector('.cart-container');
+        cartContainer.style.display = cartContainer.style.display === 'none' || cartContainer.style.display === '' ? 'block' : 'none';
+    }
 
-        let cart = [];
+    function addToCart(button, name, price, image) {
+        const cartItems = document.querySelector('.cart-items');
+        cart.push({ name, price, image, quantity: 1 });
+        cartCount++;
+        document.querySelector('.cart-icon').setAttribute('data-count', cartCount);
+        renderCartItems();
+    }
 
-        function renderProducts(products) {
-            productList.innerHTML = '';
-            products.forEach(product => {
-                const productItem = document.createElement('div');
-                productItem.className = 'product-item';
+    function renderCartItems() {
+        const cartItems = document.querySelector('.cart-items');
+        cartItems.innerHTML = '';
 
-                const productImg = document.createElement('img');
-                productImg.src = product.imageUrl;
-                productImg.alt = product.name;
+        cart.forEach((item, index) => {
+            const cartItem = document.createElement('div');
+            cartItem.className = 'cart-item';
+            cartItem.innerHTML = `
+                <img src="${item.image}" alt="${item.name}">
+                <div>
+                    <h3>${item.name}</h3>
+                    <p>R$ ${item.price.toFixed(2)}</p>
+                    <input type="number" min="1" value="${item.quantity}" onchange="updateQuantity(${index}, this.value)">
+                </div>
+                <button onclick="removeFromCart(${index})">Remover</button>
+            `;
+            cartItems.appendChild(cartItem);
+        });
+    }
 
-                const productName = document.createElement('h3');
-                productName.textContent = product.name;
+    function updateQuantity(index, quantity) {
+        cart[index].quantity = parseInt(quantity);
+    }
 
-                const productPrice = document.createElement('p');
-                productPrice.textContent = `R$ ${product.price.toFixed(2)}`;
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        cartCount--;
+        document.querySelector('.cart-icon').setAttribute('data-count', cartCount);
+        renderCartItems();
+    }
 
-                const productDescription = document.createElement('p');
-                productDescription.className = 'description';
-                productDescription.textContent = product.description;
+    function chooseOption(option) {
+        const addressInput = document.querySelector('.address-input');
+        if (option === 'entregar') {
+            addressInput.style.display = 'block';
+        } else {
+            addressInput.style.display = 'none';
+        }
+    }
 
-                const addButton = document.createElement('button');
-                addButton.textContent = 'Adicionar ao Carrinho';
-                addButton.onclick = () => addToCart(product);
+    function finalizePurchase() {
+        const address = document.getElementById('address').value;
+        const deliveryMethod = document.querySelector('.address-input').style.display === 'block' ? 'Entrega' : 'Retirada na Loja';
 
-                productItem.appendChild(productImg);
-                productItem.appendChild(productName);
-                productItem.appendChild(productPrice);
-                productItem.appendChild(productDescription);
-                productItem.appendChild(addButton);
-
-                productList.appendChild(productItem);
-            });
+        let message = `Olá, gostaria de finalizar a compra com ${deliveryMethod}.`;
+        if (deliveryMethod === 'Entrega') {
+            message += ` Endereço: ${address}.`;
         }
 
-        function addToCart(product) {
-            cart.push(product);
-            cartIcon.dataset.count = cart.length;
-            renderCart();
-        }
+        message += '\nItens do carrinho:\n';
 
-        function renderCart() {
-            const cartItems = cartContainer.querySelectorAll('.cart-item');
-            cartItems.forEach(item => item.remove());
+        cart.forEach(item => {
+            message += `- ${item.name} (R$ ${item.price.toFixed(2)}) x ${item.quantity}\n`;
+        });
 
-            cart.forEach((product, index) => {
-                const cartItem = document.createElement('div');
-                cartItem.className = 'cart-item';
+        const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        message += `\nTotal: R$ ${total.toFixed(2)}`;
 
-                const itemImg = document.createElement('img');
-                itemImg.src = product.imageUrl;
-                itemImg.alt = product.name;
+        const whatsappUrl = `https://api.whatsapp.com/send?phone=5551999999999&text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+    }
 
-                const itemName = document.createElement('div');
-                itemName.textContent = product.name;
+    function zoomImage(imgElement) {
+        const zoomOverlay = document.querySelector('.zoom-overlay');
+        const zoomedImage = zoomOverlay.querySelector('img');
+        zoomedImage.src = imgElement.src;
+        zoomOverlay.style.display = 'flex';
+    }
 
-                const itemPrice = document.createElement('div');
-                itemPrice.textContent = `R$ ${product.price.toFixed(2)}`;
+    function closeZoom() {
+        document.querySelector('.zoom-overlay').style.display = 'none';
+    }
+</script>
 
-                const itemQuantity = document.createElement('input');
-                itemQuantity.type = 'number';
-                itemQuantity.value = '1';
-                itemQuantity.min = '1';
-
-                const removeButton = document.createElement('button');
-                removeButton.textContent = 'Remover';
-                removeButton.onclick = () => removeFromCart(index);
-
-                cartItem.appendChild(itemImg);
-                cartItem.appendChild(itemName);
-                cartItem.appendChild(itemPrice);
-                cartItem.appendChild(itemQuantity);
-                cartItem.appendChild(removeButton);
-
-                cartContainer.appendChild(cartItem);
-            });
-
-            updateTotalPrice();
-        }
-
-        function removeFromCart(index) {
-            cart.splice(index, 1);
-            cartIcon.dataset.count = cart.length;
-            renderCart();
-        }
-
-        function updateTotalPrice() {
-            const total = cart.reduce((sum, item) => sum + item.price, 0);
-            messageDiv.textContent = `Total: R$ ${total.toFixed(2)}`;
-        }
-
-        cartIcon.onclick = () => {
-            cartContainer.style.display = cartContainer.style.display === 'none' ? 'block' : 'none';
-        };
-
-        closeCartBtn.onclick = () => {
-            cartContainer.style.display = 'none';
-        };
-
-        checkoutButton.onclick = () => {
-            if (cart.length === 0) {
-                messageDiv.textContent = 'Seu carrinho está vazio!';
-                return;
-            }
-
-            // Implementar lógica para finalizar a compra
-            messageDiv.textContent = 'Compra finalizada!';
-        };
-
-        // Buscar produtos do Firebase
-        async function fetchProducts() {
-            const productsRef = db.collection('products');
-            const snapshot = await productsRef.get();
-            const products = snapshot.docs.map(doc => doc.data());
-            renderProducts(products);
-        }
-
-        fetchProducts();
-    </script>
 </body>
 </html>
