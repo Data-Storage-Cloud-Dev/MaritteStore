@@ -5,6 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizar Produtos - MariteStores</title>
     <style>
+        
+        .quantity {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .quantity input[type=number] {
+            width: 50px;
+        }
+
+        .quantity button {
+            background-color: #5a2d82;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .quantity button:hover {
+            background-color: #3a1d5a;
+            transform: translateY(-3px);
+        }
+
+        #total-price {
+            display: block;
+            text-align: right;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        #shipping {
+            display: flex;
+            align-items: center;
+        }
+
+        #shipping label {
+            margin-right: 20px;
+        }
+
+        #shipping input[type=radio] {
+            margin-right: 10px;
+        }
+
+        #shipping address {
+            display: none;
+        }
+
+        #shipping input[type=radio]:checked + address {
+            display: block;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -318,6 +372,75 @@
 </footer>
 
 <script type="module">
+            document.getElementById('cart-items').addEventListener('input', event => {
+            const element = event.target;
+            if (element.tagName === 'INPUT' && element.type === 'number') {
+                const quantity = parseInt(element.value, 10);
+                if (isNaN(quantity) || quantity < 1) {
+                    element.value = 1;
+                } else {
+                    const item = cart.find(item => item.id === element.dataset.id);
+                    item.quantity = quantity;
+                    updateCartUI();
+                }
+            }
+        });
+
+        function updateCartUI() {
+            const cartItems = document.getElementById('cart-items');
+            const totalPriceElement = document.getElementById('total-price');
+            let totalPrice = 0;
+
+            cart.forEach(item => {
+                totalPrice += item.price * item.quantity;
+            });
+
+            totalPriceElement.textContent = `R$ ${totalPrice.toFixed(2)}`;
+
+            cartItems.innerHTML = '';
+
+            cart.forEach(item => {
+                cartItems.innerHTML += `
+                    <div class="cart-item">
+                        <img src="${item.image}" alt="${item.name}">
+                        <div>
+                            <h3>${item.name}</h3>
+                            <p>Preço: R$${item.price.toFixed(2)}</p>
+                            <div class="quantity">
+                                <label for="quantity">Quantidade:</label>
+                                <input type="number" value="${item.quantity}" data-id="${item.id}">
+                                <button onclick="removeFromCart('${item.id}')">Remover</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            const checkoutButton = document.getElementById('checkout-button');
+            checkoutButton.disabled = cart.length === 0;
+            checkoutButton.onclick = () => {
+                const products = cart.map(item => `${item.name} (R$${item.price.toFixed(2)}) x ${item.quantity}`).join(', ');
+                const shipping = document.querySelector('input[name="shipping"]:checked').value;
+                let address = '';
+                if (shipping === 'delivery') {
+                    address = document.getElementById('shipping-address').value;
+                }
+                const message = encodeURIComponent(`Olá! Gostaria de finalizar a compra dos seguintes produtos: ${products}. Valor total: R$${totalPrice.toFixed(2)}. ${shipping === 'store' ? '' : `Endereço: ${address}`} `);
+                window.open(`https://wa.me/5581993892484?text=${message}`, '_blank');
+            };
+        }
+
+        document.getElementById('shipping').addEventListener('change', event => {
+            const shipping = event.target.value;
+            const address = document.getElementById('shipping-address');
+            if (shipping === 'delivery') {
+                address.style.display = 'block';
+            } else {
+                address.style.display = 'none';
+            }
+        });
+
+        updateCartUI();
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
     import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
@@ -468,130 +591,3 @@
 
 </body>
 </html>
-    <style>
-        .quantity {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .quantity input[type=number] {
-            width: 50px;
-        }
-
-        .quantity button {
-            background-color: #5a2d82;
-            color: white;
-            border: none;
-            padding: 10px;
-            font-size: 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.3s ease;
-        }
-
-        .quantity button:hover {
-            background-color: #3a1d5a;
-            transform: translateY(-3px);
-        }
-
-        #total-price {
-            display: block;
-            text-align: right;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
-
-        #shipping {
-            display: flex;
-            align-items: center;
-        }
-
-        #shipping label {
-            margin-right: 20px;
-        }
-
-        #shipping input[type=radio] {
-            margin-right: 10px;
-        }
-
-        #shipping address {
-            display: none;
-        }
-
-        #shipping input[type=radio]:checked + address {
-            display: block;
-        }
-    </style>
-
-    <script>
-        document.getElementById('cart-items').addEventListener('input', event => {
-            const element = event.target;
-            if (element.tagName === 'INPUT' && element.type === 'number') {
-                const quantity = parseInt(element.value, 10);
-                if (isNaN(quantity) || quantity < 1) {
-                    element.value = 1;
-                } else {
-                    const item = cart.find(item => item.id === element.dataset.id);
-                    item.quantity = quantity;
-                    updateCartUI();
-                }
-            }
-        });
-
-        function updateCartUI() {
-            const cartItems = document.getElementById('cart-items');
-            const totalPriceElement = document.getElementById('total-price');
-            let totalPrice = 0;
-
-            cart.forEach(item => {
-                totalPrice += item.price * item.quantity;
-            });
-
-            totalPriceElement.textContent = `R$ ${totalPrice.toFixed(2)}`;
-
-            cartItems.innerHTML = '';
-
-            cart.forEach(item => {
-                cartItems.innerHTML += `
-                    <div class="cart-item">
-                        <img src="${item.image}" alt="${item.name}">
-                        <div>
-                            <h3>${item.name}</h3>
-                            <p>Preço: R$${item.price.toFixed(2)}</p>
-                            <div class="quantity">
-                                <label for="quantity">Quantidade:</label>
-                                <input type="number" value="${item.quantity}" data-id="${item.id}">
-                                <button onclick="removeFromCart('${item.id}')">Remover</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            const checkoutButton = document.getElementById('checkout-button');
-            checkoutButton.disabled = cart.length === 0;
-            checkoutButton.onclick = () => {
-                const products = cart.map(item => `${item.name} (R$${item.price.toFixed(2)}) x ${item.quantity}`).join(', ');
-                const shipping = document.querySelector('input[name="shipping"]:checked').value;
-                let address = '';
-                if (shipping === 'delivery') {
-                    address = document.getElementById('shipping-address').value;
-                }
-                const message = encodeURIComponent(`Olá! Gostaria de finalizar a compra dos seguintes produtos: ${products}. Valor total: R$${totalPrice.toFixed(2)}. ${shipping === 'store' ? '' : `Endereço: ${address}`} `);
-                window.open(`https://wa.me/5581993892484?text=${message}`, '_blank');
-            };
-        }
-
-        document.getElementById('shipping').addEventListener('change', event => {
-            const shipping = event.target.value;
-            const address = document.getElementById('shipping-address');
-            if (shipping === 'delivery') {
-                address.style.display = 'block';
-            } else {
-                address.style.display = 'none';
-            }
-        });
-
-        updateCartUI();
-    </script>
