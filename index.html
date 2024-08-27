@@ -227,7 +227,6 @@
     const firebaseConfig = {
         apiKey: "AIzaSyBhNN1vh1G_BEwRe9r4A-4bEN9WbYA_Xy0",
         authDomain: "maritestore-12ce5.firebaseapp.com",
-        databaseURL: "https://maritestore-12ce5.firebaseio.com", // URL corrigida
         projectId: "maritestore-12ce5",
         storageBucket: "maritestore-12ce5.appspot.com",
         messagingSenderId: "476047375711",
@@ -265,7 +264,7 @@
         cart.forEach(item => {
             cartItems.innerHTML += `
                 <div class="cart-item">
-                    <img src="${item.image || 'default-product.png'}" alt="${item.name}">
+                    <img src="${item.image}" alt="${item.name}">
                     <div>
                         <h3>${item.name}</h3>
                         <p>Preço: R$${item.price.toFixed(2)}</p>
