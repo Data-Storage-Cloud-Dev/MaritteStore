@@ -227,7 +227,6 @@
     const firebaseConfig = {
         apiKey: "AIzaSyBhNN1vh1G_BEwRe9r4A-4bEN9WbYA_Xy0",
         authDomain: "maritestore-12ce5.firebaseapp.com",
-        databaseURL: "https://maritestore-12ce5.firebaseio.com", // URL corrigida
         projectId: "maritestore-12ce5",
         storageBucket: "maritestore-12ce5.appspot.com",
         messagingSenderId: "476047375711",
@@ -265,7 +264,7 @@
         cart.forEach(item => {
             cartItems.innerHTML += `
                 <div class="cart-item">
-                    <img src="${item.image || 'default-product.png'}" alt="${item.name}">
+                    <img src="${item.image}" alt="${item.name}">
                     <div>
                         <h3>${item.name}</h3>
                         <p>Preço: R$${item.price.toFixed(2)}</p>
@@ -275,42 +274,70 @@
                 </div>
             `;
         });
+
+        const checkoutButton = document.getElementById('checkout-button');
+        checkoutButton.disabled = cart.length === 0;
+        checkoutButton.onclick = () => {
+            const products = cart.map(item => `${item.name} (R$${item.price.toFixed(2)})`).join(', ');
+            const message = encodeURIComponent(`Olá! Gostaria de finalizar a compra dos seguintes produtos: ${products}.`);
+            window.open(`https://wa.me/5581993892484?text=${message}`, '_blank');
+        };
     }
 
     function loadProducts() {
+        const productList = document.getElementById('product-list');
+        productList.innerHTML = '';
+
         const productsRef = ref(db, 'products');
         onValue(productsRef, (snapshot) => {
-            const data = snapshot.val();
-            const productList = document.getElementById('product-list');
-            productList.innerHTML = '';
-
-            for (const id in data) {
-                const product = data[id];
-                productList.innerHTML += `
-                    <div class="product-item">
-                        <img src="${product.image || 'default-product.png'}" alt="${product.name}" onclick="showImage('${product.image || 'default-product.png'}')">
-                        <h3>${product.name}</h3>
-                        <p>Preço: R$${product.price.toFixed(2)}</p>
-                        <button onclick="addToCart(${JSON.stringify(product)})">Adicionar ao Carrinho</button>
-                    </div>
-                `;
+            const products = snapshot.val();
+            if (products) {
+                productList.innerHTML = ''; // Limpar a lista antes de adicionar novos produtos
+                for (const id in products) {
+                    const product = products[id];
+                    const price = parseFloat(product.price); // Garantir que o preço seja um número
+                    productList.innerHTML += `
+                        <div class="product-item">
+                            <img src="${product.image || 'default-product.png'}" alt="${product.name}" onclick="showZoomImage('${product.image || 'default-product.png'}')">
+                            <h3>${product.name}</h3>
+                            <p>Preço: R$${isNaN(price) ? 'Indisponível' : price.toFixed(2)}</p>
+                            <button onclick="addToCart({ id: '${id}', name: '${product.name}', price: ${price}, image: '${product.image || 'default-product.png'}' })">Adicionar ao Carrinho</button>
+                        </div>
+                    `;
+                }
+            } else {
+                productList.innerHTML = '<p>Nenhum produto disponível.</p>';
             }
         });
     }
 
-    function showImage(imageSrc) {
+    function loadStoreInfo() {
+        const storeRef = ref(db, 'storeInfo');
+        onValue(storeRef, (snapshot) => {
+            const storeInfo = snapshot.val();
+            if (storeInfo) {
+                document.getElementById('store-logo').src = storeInfo.logo || 'default-logo.png';
+                document.getElementById('store-name').textContent = storeInfo.name || 'Nome da Loja';
+                document.getElementById('contact-info').textContent = storeInfo.contact ? `Contato: ${storeInfo.contact}` : 'Contato não disponível';
+            } else {
+                console.log('Informações da loja não encontradas.');
+            }
+        });
+    }
+
+    function showZoomImage(src) {
         const zoomOverlay = document.getElementById('zoom-overlay');
         const zoomImage = document.getElementById('zoom-image');
-        zoomImage.src = imageSrc;
+        zoomImage.src = src;
         zoomOverlay.style.display = 'flex';
     }
 
-    document.getElementById('zoom-overlay').onclick = function() {
-        this.style.display = 'none';
-    };
+    document.getElementById('zoom-overlay').addEventListener('click', () => {
+        document.getElementById('zoom-overlay').style.display = 'none';
+    });
 
-    // Inicializar a lista de produtos ao carregar a página
     loadProducts();
+    loadStoreInfo();
 </script>
 
 </body>
