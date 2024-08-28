@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizar Produtos - MariteStores</title>
     <style>
-        /* Estilos gerais */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -150,19 +149,6 @@
             z-index: 1000;
         }
 
-        .cart-icon::after {
-            content: attr(data-count);
-            position: absolute;
-            top: 0;
-            right: 0;
-            background-color: #e74c3c;
-            color: white;
-            border-radius: 50%;
-            padding: 4px 8px;
-            font-size: 14px;
-            transform: translate(50%, -50%);
-        }
-
         .cart-container {
             position: fixed;
             top: 20px;
@@ -238,38 +224,6 @@
             transform: translateY(-2px);
         }
 
-        .cart-item input[type='number'] {
-            width: 50px;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 16px;
-        }
-
-        .checkout-options {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-
-        .checkout-options button {
-            background-color: #6a1b9a;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            font-size: 18px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.3s ease;
-            width: 48%;
-        }
-
-        .checkout-options button:hover {
-            background-color: #4a148c;
-            transform: translateY(-2px);
-        }
-
         .checkout-button {
             background-color: #6a1b9a;
             color: white;
@@ -288,200 +242,229 @@
             transform: translateY(-2px);
         }
 
-        .address-input {
-            display: none;
-            margin-top: 10px;
-        }
-
-        .address-input input {
-            padding: 12px;
-            font-size: 16px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+        .zoom-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
         }
 
-        .cart-summary {
-            margin-top: 20px;
+        .zoom-overlay img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
         }
 
-        .cart-summary p {
-            font-size: 20px;
-            margin: 0;
-            color: #333;
-        }
-
-        .cart-summary span {
-            font-weight: bold;
+        footer {
+            background-color: #6a1b9a;
+            color: white;
+            padding: 15px 30px;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
 <body>
-    <header>
-        <img src="logo.png" alt="MariteStores Logo">
-        <h1>MariteStores</h1>
-    </header>
 
-    <div class="search-container">
-        <input type="text" id="searchBar" placeholder="Pesquise por produtos..." oninput="filterProducts()">
-        <select id="categoryFilter" onchange="filterProducts()">
-            <option value="">Todas as Categorias</option>
-            <!-- Adicione opções de categorias aqui -->
-            <option value="eletronicos">Eletrônicos</option>
-            <option value="roupas">Roupas</option>
-            <!-- ... -->
-        </select>
+<header>
+    <img id="store-logo" src="default-logo.png" alt="Logo da Loja">
+    <h1 id="store-name">Visualizar Produtos - MariteStores</h1>
+</header>
+
+<div class="search-container">
+    <input type="text" id="search-input" placeholder="Pesquisar produtos...">
+    <select id="filter-select">
+        <option value="">Todas as Categorias</option>
+        <!-- As categorias serão carregadas aqui pelo Firebase -->
+    </select>
+</div>
+
+<div class="container">
+    <div id="product-list" class="product-list">
+        <!-- Produtos serão carregados aqui pelo Firebase -->
     </div>
+</div>
 
-    <div class="container">
-        <div class="product-list" id="productList">
-            <!-- Produtos serão carregados aqui -->
-        </div>
-        <div class="cart-icon" onclick="toggleCart()" data-count="0">
-            🛒
-        </div>
-        <div class="cart-container" id="cartContainer">
-            <h2>Carrinho <button class="close-btn" onclick="toggleCart()">X</button></h2>
-            <div id="cartItems">
-                <!-- Itens do carrinho serão carregados aqui -->
-            </div>
-            <div class="cart-summary" id="cartSummary">
-                <p>Total: <span id="cartTotal">R$0,00</span></p>
-                <button class="checkout-button" onclick="checkout()">Finalizar Compra</button>
-            </div>
-        </div>
+<div id="cart-icon" class="cart-icon">
+    🛒
+</div>
+
+<div id="cart-container" class="cart-container">
+    <h2>
+        Carrinho
+        <button class="close-btn" onclick="document.getElementById('cart-container').style.display='none'">X</button>
+    </h2>
+    <div id="cart-items">
+        <!-- Itens do carrinho serão carregados aqui -->
     </div>
+    <button id="checkout-button" class="checkout-button" disabled>Finalizar Compra</button>
+</div>
 
-    <!-- Firebase App (the core Firebase SDK) is always required and must be first -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
-    <script>
-        // Configuração do Firebase
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
+<div id="zoom-overlay" class="zoom-overlay">
+    <img id="zoom-image" src="" alt="Imagem do Produto">
+</div>
 
-        // Inicialize o Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+<footer>
+    &copy; 2024 MariteStores. Todos os direitos reservados.
+</footer>
 
-        // Carregar produtos
-        function loadProducts() {
-            db.collection("products").get().then((querySnapshot) => {
-                const productList = document.getElementById('productList');
-                productList.innerHTML = ''; // Limpa a lista de produtos
-                querySnapshot.forEach((doc) => {
-                    const product = doc.data();
-                    const productItem = document.createElement('div');
-                    productItem.className = 'product-item';
-                    productItem.innerHTML = `
-                        <img src="${product.image}" alt="${product.name}">
-                        <h3>${product.name}</h3>
-                        <p>R$${product.price.toFixed(2)}</p>
-                        <p class="description">${product.description || 'Sem descrição'}</p>
-                        <button onclick="addToCart('${doc.id}', '${product.name}', ${product.price}, '${product.image}')">Adicionar ao Carrinho</button>
-                    `;
-                    productList.appendChild(productItem);
-                });
-            });
-        }
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
-        // Adicionar produto ao carrinho
-        const cart = {};
-        function addToCart(productId, name, price, image) {
-            if (!cart[productId]) {
-                cart[productId] = { name, price, image, quantity: 1 };
+    // Configuração do Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyBhNN1vh1G_BEwRe9r4A-4bEN9WbYA_Xy0",
+        authDomain: "maritestore-12ce5.firebaseapp.com",
+        projectId: "maritestore-12ce5",
+        storageBucket: "maritestore-12ce5.appspot.com",
+        messagingSenderId: "476047375711",
+        appId: "1:476047375711:web:4efd4a04ed752e31338aea",
+        measurementId: "G-0JZS99PC9M",
+        databaseURL: "https://maritestore-12ce5-default-rtdb.firebaseio.com"  // URL do Firebase Realtime Database
+    };
+
+    // Inicializar o Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let cart = [];
+    let products = [];
+    let categories = [];
+
+    function loadProducts() {
+        const productList = document.getElementById('product-list');
+        const searchInput = document.getElementById('search-input').value.toLowerCase();
+        const filterSelect = document.getElementById('filter-select').value;
+
+        productList.innerHTML = '';
+
+        const productsRef = ref(db, 'products');
+        onValue(productsRef, (snapshot) => {
+            products = snapshot.val() || {};
+            if (products) {
+                productList.innerHTML = ''; // Limpar a lista antes de adicionar novos produtos
+                for (const id in products) {
+                    const product = products[id];
+                    if ((searchInput === '' || product.name.toLowerCase().includes(searchInput)) &&
+                        (filterSelect === '' || product.category === filterSelect)) {
+                        const price = parseFloat(product.price); // Garantir que o preço seja um número
+                        productList.innerHTML += `
+                            <div class="product-item">
+                                <img src="${product.image || 'default-product.png'}" alt="${product.name}" onclick="showZoomImage('${product.image || 'default-product.png'}')">
+                                <h3>${product.name}</h3>
+                                <p>Preço: R$${isNaN(price) ? 'Indisponível' : price.toFixed(2)}</p>
+                                <p class="description">${product.description || 'Descrição não disponível.'}</p>
+                                <button onclick="addToCart({ id: '${id}', name: '${product.name}', price: ${price}, image: '${product.image || 'default-product.png'}' })">Adicionar ao Carrinho</button>
+                            </div>
+                        `;
+                    }
+                }
             } else {
-                cart[productId].quantity++;
+                productList.innerHTML = '<p>Nenhum produto disponível.</p>';
             }
-            updateCart();
+        });
+    }
+
+    function loadCategories() {
+        const filterSelect = document.getElementById('filter-select');
+        const categoriesRef = ref(db, 'categories');
+        onValue(categoriesRef, (snapshot) => {
+            categories = snapshot.val() || [];
+            filterSelect.innerHTML = '<option value="">Todas as Categorias</option>';
+            categories.forEach(category => {
+                filterSelect.innerHTML += `<option value="${category}">${category}</option>`;
+            });
+        });
+    }
+
+    function loadStoreInfo() {
+        const storeRef = ref(db, 'storeInfo');
+        onValue(storeRef, (snapshot) => {
+            const storeInfo = snapshot.val();
+            if (storeInfo) {
+                document.getElementById('store-logo').src = storeInfo.logo || 'default-logo.png';
+                document.getElementById('store-name').textContent = storeInfo.name || 'Nome da Loja';
+                document.getElementById('contact-info').textContent = storeInfo.contact ? `Contato: ${storeInfo.contact}` : 'Contato não disponível';
+            } else {
+                console.log('Informações da loja não encontradas.');
+            }
+        });
+    }
+
+    function showZoomImage(src) {
+        const zoomOverlay = document.getElementById('zoom-overlay');
+        const zoomImage = document.getElementById('zoom-image');
+        zoomImage.src = src;
+        zoomOverlay.style.display = 'flex';
+    }
+
+    document.getElementById('zoom-overlay').addEventListener('click', () => {
+        document.getElementById('zoom-overlay').style.display = 'none';
+    });
+
+    document.getElementById('search-input').addEventListener('input', loadProducts);
+    document.getElementById('filter-select').addEventListener('change', loadProducts);
+    document.getElementById('cart-icon').addEventListener('click', () => {
+        const cartContainer = document.getElementById('cart-container');
+        cartContainer.style.display = cartContainer.style.display === 'block' ? 'none' : 'block';
+    });
+
+    window.addToCart = function(product) {
+        const index = cart.findIndex(item => item.id === product.id);
+        if (index === -1) {
+            cart.push({ ...product, quantity: 1 });
+        } else {
+            cart[index].quantity += 1;
         }
+        updateCartUI();
+    };
 
-        // Atualizar carrinho
-        function updateCart() {
-            const cartItems = document.getElementById('cartItems');
-            const cartSummary = document.getElementById('cartSummary');
-            cartItems.innerHTML = ''; // Limpa os itens do carrinho
-            let total = 0;
+    window.removeFromCart = function(productId) {
+        cart = cart.filter(item => item.id !== productId);
+        updateCartUI();
+    };
 
-            Object.keys(cart).forEach((productId) => {
-                const item = cart[productId];
-                const cartItem = document.createElement('div');
-                cartItem.className = 'cart-item';
-                cartItem.innerHTML = `
+    function updateCartUI() {
+        const cartItems = document.getElementById('cart-items');
+        cartItems.innerHTML = '';
+
+        cart.forEach(item => {
+            cartItems.innerHTML += `
+                <div class="cart-item">
                     <img src="${item.image}" alt="${item.name}">
                     <div>
-                        <p>${item.name}</p>
-                        <p>R$${item.price.toFixed(2)}</p>
-                        <input type="number" value="${item.quantity}" min="1" onchange="updateQuantity('${productId}', this.value)">
+                        <h3>${item.name}</h3>
+                        <p>Preço: R$${item.price.toFixed(2)}</p>
+                        <p>Quantidade: ${item.quantity}</p>
                     </div>
-                    <button onclick="removeFromCart('${productId}')">Remover</button>
-                `;
-                cartItems.appendChild(cartItem);
-                total += item.price * item.quantity;
-            });
+                    <button onclick="removeFromCart('${item.id}')">Remover</button>
+                </div>
+            `;
+        });
 
-            document.getElementById('cartTotal').innerText = `R$${total.toFixed(2)}`;
-            document.querySelector('.cart-icon').setAttribute('data-count', Object.keys(cart).length);
-        }
+        const checkoutButton = document.getElementById('checkout-button');
+        checkoutButton.disabled = cart.length === 0;
+        checkoutButton.onclick = () => {
+            const products = cart.map(item => `${item.name} (R$${item.price.toFixed(2)}) x ${item.quantity}`).join(', ');
+            const message = encodeURIComponent(`Olá! Gostaria de finalizar a compra dos seguintes produtos: ${products}.`);
+            window.open(`https://wa.me/5581993892484?text=${message}`, '_blank');
+        };
+    }
 
-        // Atualizar quantidade do item no carrinho
-        function updateQuantity(productId, quantity) {
-            if (cart[productId]) {
-                cart[productId].quantity = parseInt(quantity, 10);
-                if (cart[productId].quantity <= 0) {
-                    delete cart[productId];
-                }
-                updateCart();
-            }
-        }
+    loadCategories();
+    loadProducts();
+    loadStoreInfo();
+</script>
 
-        // Remover item do carrinho
-        function removeFromCart(productId) {
-            delete cart[productId];
-            updateCart();
-        }
-
-        // Finalizar compra
-        function checkout() {
-            alert('Compra finalizada! Obrigado pela compra.');
-            // Aqui você pode integrar com um sistema de pagamento, como Mercado Pago.
-            // Limpar o carrinho
-            for (const productId in cart) {
-                delete cart[productId];
-            }
-            updateCart();
-        }
-
-        // Toggle visibilidade do carrinho
-        function toggleCart() {
-            const cartContainer = document.getElementById('cartContainer');
-            const isVisible = cartContainer.style.display === 'block';
-            cartContainer.style.display = isVisible ? 'none' : 'block';
-        }
-
-        // Filtrar produtos
-        function filterProducts() {
-            const searchValue = document.getElementById('searchBar').value.toLowerCase();
-            const categoryValue = document.getElementById('categoryFilter').value;
-
-            document.querySelectorAll('.product-item').forEach((item) => {
-                const name = item.querySelector('h3').textContent.toLowerCase();
-                const category = item.dataset.category || '';
-                const matchesSearch = name.includes(searchValue);
-                const matchesCategory = categoryValue === '' || category === categoryValue;
-
-                item.style.display = matchesSearch && matchesCategory ? 'block' : 'none';
-            });
-        }
-
-        // Carregar produtos ao inicializar
-        window.onload = loadProducts;
-    </script>
 </body>
 </html>
